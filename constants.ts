@@ -197,9 +197,9 @@ export const INITIAL_WATCHLIST_DATA: WatchlistItem[] = [
 
 
 export const INITIAL_PORTFOLIO_DATA: Position[] = [
-    { id: 'pos1', symbol: 'NIFTY 23500 CE', quantity: 25, avgPrice: 150.50, ltp: 165.75, pnl: 381.25 },
-    { id: 'pos2', symbol: 'RELIANCE FUT', quantity: -250, avgPrice: 2960.00, ltp: 2955.00, pnl: 1250.00 },
-    { id: 'pos3', symbol: 'BANKNIFTY 51500 PE', quantity: 15, avgPrice: 250.00, ltp: 220.25, pnl: -446.25 },
+    { id: 'pos1', symbol: 'NIFTY', quantity: 25, avgPrice: 23530.00, ltp: 23530.00, pnl: 0 },
+    { id: 'pos2', symbol: 'RELIANCE', quantity: -250, avgPrice: 2955.00, ltp: 2955.00, pnl: 0 },
+    { id: 'pos3', symbol: 'BANKNIFTY', quantity: -15, avgPrice: 51600.00, ltp: 51600.00, pnl: 0 },
 ];
 
 export const INITIAL_ALERTS_DATA: Alert[] = [

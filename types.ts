@@ -26,8 +26,8 @@ export enum Broker {
 
 export interface Position {
   id: string;
-  symbol: string;
-  quantity: number;
+  symbol: string; // Matches a symbol in the watchlist, e.g., "NIFTY", "RELIANCE"
+  quantity: number; // Positive for long, negative for short
   avgPrice: number;
   ltp: number;
   pnl: number;

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { WatchlistItem, OrderDetails } from '../types';
+import { WatchlistItem, OrderDetails, Position } from '../types';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/Card';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
@@ -12,9 +12,10 @@ interface OrderWindowProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmitOrder: (order: OrderDetails, instrument: WatchlistItem) => void;
+  positionToClose?: Position | null;
 }
 
-export const OrderWindow: React.FC<OrderWindowProps> = ({ instrument, initialTransactionType, isOpen, onClose, onSubmitOrder }) => {
+export const OrderWindow: React.FC<OrderWindowProps> = ({ instrument, initialTransactionType, isOpen, onClose, onSubmitOrder, positionToClose }) => {
   const [transactionType, setTransactionType] = useState<'BUY' | 'SELL'>(initialTransactionType);
   const [orderType, setOrderType] = useState<'MARKET' | 'LIMIT'>('MARKET');
   const [quantity, setQuantity] = useState<number>(instrument.lotSize);
@@ -23,11 +24,16 @@ export const OrderWindow: React.FC<OrderWindowProps> = ({ instrument, initialTra
 
   useEffect(() => {
     setTransactionType(initialTransactionType);
-    setQuantity(instrument.lotSize);
     setPrice(instrument.nearMonthFuture);
     setOrderType('MARKET');
     setError('');
-  }, [instrument, initialTransactionType]);
+
+    if (positionToClose) {
+      setQuantity(Math.abs(positionToClose.quantity));
+    } else {
+      setQuantity(instrument.lotSize);
+    }
+  }, [instrument, initialTransactionType, positionToClose]);
 
   if (!isOpen) return null;
 
@@ -35,19 +41,19 @@ export const OrderWindow: React.FC<OrderWindowProps> = ({ instrument, initialTra
     const value = parseInt(e.target.value, 10);
     const newQuantity = isNaN(value) ? 0 : value;
     setQuantity(newQuantity);
+    
+    let currentError = '';
     if (newQuantity > 0 && newQuantity % instrument.lotSize !== 0) {
-      setError(`Quantity must be a multiple of lot size (${instrument.lotSize}).`);
-    } else {
-      setError('');
+      currentError = `Quantity must be a multiple of lot size (${instrument.lotSize}).`;
+    } else if (positionToClose && newQuantity > Math.abs(positionToClose.quantity)) {
+      currentError = `Cannot close more than existing position quantity (${Math.abs(positionToClose.quantity)}).`;
     }
+    setError(currentError);
   };
 
   const handleSubmit = () => {
-    if (error) return;
-    if (quantity <= 0) {
-      setError('Quantity must be greater than 0.');
-      return;
-    }
+    if (error || quantity <= 0) return;
+
     const orderDetails: OrderDetails = {
       symbol: instrument.symbol,
       transactionType,
@@ -61,12 +67,13 @@ export const OrderWindow: React.FC<OrderWindowProps> = ({ instrument, initialTra
 
   const estimatedMargin = (orderType === 'LIMIT' ? price : instrument.nearMonthFuture) * quantity;
   const isBuy = transactionType === 'BUY';
+  const windowTitle = positionToClose ? 'Close Position' : 'Place Order';
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
       <Card className="w-full max-w-md animate-fade-in-up">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Place Order: <span className="font-mono">{instrument.symbol}</span></CardTitle>
+          <CardTitle>{windowTitle}: <span className="font-mono">{instrument.symbol}</span></CardTitle>
           <button onClick={onClose} className="text-gray-400 hover:text-white p-1 rounded-full hover:bg-gray-700">
             <X size={20} />
           </button>
@@ -87,15 +94,19 @@ export const OrderWindow: React.FC<OrderWindowProps> = ({ instrument, initialTra
               Limit
             </label>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Quantity"
-              type="number"
-              value={quantity}
-              onChange={handleQuantityChange}
-              step={instrument.lotSize}
-              min={instrument.lotSize}
-            />
+          <div className="grid grid-cols-2 gap-4 items-start">
+            <div>
+              <Input
+                label="Quantity"
+                type="number"
+                value={quantity}
+                onChange={handleQuantityChange}
+                step={instrument.lotSize}
+                min={0}
+                isInvalid={!!error}
+              />
+              {error && <p className="text-red-400 text-xs mt-1 px-1">{error}</p>}
+            </div>
             <Input
               label="Price"
               type="number"
@@ -104,7 +115,6 @@ export const OrderWindow: React.FC<OrderWindowProps> = ({ instrument, initialTra
               disabled={orderType === 'MARKET'}
             />
           </div>
-          {error && <p className="text-red-400 text-sm">{error}</p>}
           <div className="text-sm text-gray-400">
             Lot Size: <span className="font-semibold text-gray-200">{instrument.lotSize}</span>
           </div>
@@ -115,7 +125,7 @@ export const OrderWindow: React.FC<OrderWindowProps> = ({ instrument, initialTra
             <span className="font-mono text-white">₹ {estimatedMargin.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
           <Button onClick={handleSubmit} disabled={!!error || quantity <= 0} className="w-full" variant={isBuy ? 'primary' : 'danger'}>
-            Place {transactionType} Order
+             {positionToClose ? `Close Position` : `Place ${transactionType} Order`}
           </Button>
         </CardFooter>
       </Card>

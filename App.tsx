@@ -18,17 +18,45 @@ const App: React.FC = () => {
 
   const handleExecuteOrder = (order: OrderDetails, instrument: WatchlistItem) => {
     const executionPrice = order.orderType === 'LIMIT' && order.price ? order.price : instrument.nearMonthFuture;
+    const orderQuantity = order.transactionType === 'BUY' ? order.quantity : -order.quantity;
 
-    const newPosition: Position = {
-      id: `pos_${Date.now()}_${instrument.symbol}`,
-      symbol: `${order.symbol} ${order.transactionType === 'SELL' ? 'SHORT' : 'LONG'}`,
-      quantity: order.transactionType === 'BUY' ? order.quantity : -order.quantity,
-      avgPrice: executionPrice,
-      ltp: executionPrice,
-      pnl: 0,
-    };
+    setPositions(prevPositions => {
+      const existingPosition = prevPositions.find(p => p.symbol === order.symbol);
+      
+      if (existingPosition) {
+        const newQuantity = existingPosition.quantity + orderQuantity;
 
-    setPositions(prevPositions => [...prevPositions, newPosition]);
+        if (newQuantity === 0) {
+          // Position closed, remove from array
+          return prevPositions.filter(p => p.symbol !== order.symbol);
+        } else {
+          // Update existing position
+          let newAvgPrice = existingPosition.avgPrice;
+          // Only recalculate average price if adding to the position in the same direction
+          if (Math.sign(newQuantity) === Math.sign(existingPosition.quantity)) {
+             newAvgPrice = ((existingPosition.avgPrice * existingPosition.quantity) + (executionPrice * orderQuantity)) / newQuantity;
+          }
+
+          return prevPositions.map(p => 
+            p.symbol === order.symbol 
+              ? { ...p, quantity: newQuantity, avgPrice: parseFloat(newAvgPrice.toFixed(2)), ltp: executionPrice } 
+              : p
+          );
+        }
+      } else {
+        // New position
+        const newPosition: Position = {
+          id: `pos_${Date.now()}_${instrument.symbol}`,
+          symbol: order.symbol,
+          quantity: orderQuantity,
+          avgPrice: executionPrice,
+          ltp: executionPrice,
+          pnl: 0,
+        };
+        return [...prevPositions, newPosition];
+      }
+    });
+
     alert(`${order.transactionType} order for ${order.quantity} of ${order.symbol} placed successfully!`);
     setActivePage('portfolio');
   };
@@ -39,7 +67,7 @@ const App: React.FC = () => {
       case 'dashboard':
         return <DashboardPage handleExecuteOrder={handleExecuteOrder} />;
       case 'portfolio':
-        return <PortfolioPage positions={positions} />;
+        return <PortfolioPage positions={positions} handleExecuteOrder={handleExecuteOrder} />;
       case 'alerts':
         return <AlertsPage />;
       case 'settings':
