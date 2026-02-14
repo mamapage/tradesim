@@ -1,0 +1,5 @@
+{
+  "name": "F&O Paper Trading Dashboard",
+  "description": "A live paper trading web application for the Indian Stock Market (NSE/BSE) that supports Equity and F&O. It allows users to connect their own brokerage accounts and features a dynamic F&O watchlist, paper trading engine, and a multi-channel alert system.",
+  "requestFramePermissions": []
+}
